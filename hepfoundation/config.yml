@@ -1,0 +1,76 @@
+data_path: ./data/
+db_dir: &db_dir ./db/hepfoundation.zarr
+save_dir: ./savers/saver
+processes_pretrain:
+    - cms
+processes_maintask:
+    - 2hdm425-325
+    - ttbar
+phases_pretrain:
+    - 1048576
+    - 100000
+    - 100000
+phases_maintask:
+    - 524288
+    - 50000
+    - 50000
+
+# deep learning configuration
+task_args:
+    num_epochs: &num_epochs 100
+    num_workers: 0
+    device: 'cuda'
+    batch_size: 1024
+    batch_sampler: True
+    optimizer: SGD
+    optimizer_args:
+        per_params:
+            - params: embedding
+              lr: 0.01
+            - params: feature
+              lr: 0.01
+            - params: classifier
+              lr: 0.01
+        lr: 0.01
+        momentum: 0.9
+        weight_decay: 0.00005
+    metrics:
+        - loss
+    scheduler: CosineAnnealingLR
+    scheduler_args:
+        T_max: *num_epochs
+        eta_min: 0.0001
+    max_patience: *num_epochs
+    loss: CrossEntropyLoss
+    input_var_names:
+        - features
+        - masks
+    output_var_names: preds
+    true_var_names: labels
+    metric_sample: 100
+    torch_compile: True
+    torchinfo: True
+    verbose: 1
+agent_args:
+    dump_all_results: True
+    metric: AUCMetric
+    metric_args:
+        var_names: 'preds labels'
+
+# expert configurations 
+zarr_args_a: &zarr_args_a
+    chunk: 1000
+    output_dir: *db_dir
+    mode: a
+zarr_args_w: &zarr_args_w
+    chunk: 1000
+    output_dir: *db_dir
+    mode: w
+sg_args_a:
+    backend: hybrid
+    backend_args: *zarr_args_a
+    data_id: hepdoundation
+sg_args_w:
+    backend: hybrid
+    backend_args: *zarr_args_w
+    data_id: hepfoundation
